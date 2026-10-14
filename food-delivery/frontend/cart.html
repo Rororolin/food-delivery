@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Корзина — Линуксоед</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e0c;
+    --surface: #1a1814;
+    --card: #211f1b;
+    --accent: #e8c547;
+    --accent2: #e87d47;
+    --text: #f0ece3;
+    --muted: #7a7568;
+    --border: #2e2b24;
+    --red: #e84747;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  header {
+    padding: 1.5rem 3rem;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--bg); z-index: 100;
+  }
+
+  .back-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--muted); padding: 0.5rem 1rem;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    transition: all 0.2s; font-size: 0.9rem;
+  }
+  .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .logo { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900; color: var(--accent); }
+
+  .page-layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 0;
+    min-height: calc(100vh - 70px);
+  }
+
+  @media (max-width: 800px) {
+    .page-layout { grid-template-columns: 1fr; }
+    header { padding: 1.5rem 1.5rem; }
+  }
+
+  .cart-items {
+    padding: 3rem;
+    border-right: 1px solid var(--border);
+  }
+
+  .cart-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem; font-weight: 900;
+    margin-bottom: 0.5rem;
+  }
+  .cart-subtitle { color: var(--muted); margin-bottom: 2.5rem; font-size: 0.9rem; }
+
+  .cart-item {
+    display: flex; align-items: center;
+    gap: 1.5rem; padding: 1.5rem 0;
+    border-bottom: 1px solid var(--border);
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .item-info { flex: 1; }
+  .item-info h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; margin-bottom: 0.2rem; }
+  .item-info .unit-price { color: var(--muted); font-size: 0.85rem; }
+
+  .qty-controls { display: flex; align-items: center; }
+
+  .qty-btn {
+    width: 30px; height: 30px;
+    background: var(--border); border: none;
+    color: var(--text); font-size: 1rem;
+    cursor: pointer; transition: background 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .qty-btn:hover { background: var(--accent); color: var(--bg); }
+  .qty-display {
+    width: 34px; height: 30px;
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 500;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .item-total {
+    font-size: 1.1rem; font-weight: 500;
+    color: var(--accent); min-width: 70px; text-align: right;
+  }
+
+  .delete-btn {
+    background: none; border: none; color: var(--border);
+    cursor: pointer; font-size: 1.1rem;
+    transition: color 0.2s; padding: 0.2rem;
+  }
+  .delete-btn:hover { color: var(--red); }
+
+  .empty-cart {
+    padding: 4rem 0; text-align: center; color: var(--muted);
+  }
+  .empty-cart .icon { font-size: 3rem; margin-bottom: 1rem; }
+  .empty-cart p { margin-bottom: 1.5rem; }
+  .go-catalog-btn {
+    background: var(--accent); color: var(--bg); border: none;
+    padding: 0.8rem 2rem; font-family: 'DM Sans', sans-serif;
+    font-weight: 500; cursor: pointer; font-size: 1rem;
+    transition: background 0.2s;
+  }
+  .go-catalog-btn:hover { background: var(--accent2); }
+
+  /* Правая панель — итог */
+  .order-summary {
+    padding: 3rem 2.5rem;
+    position: sticky; top: 70px;
+    align-self: start;
+  }
+
+  .summary-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem; font-weight: 700;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .summary-row {
+    display: flex; justify-content: space-between;
+    margin-bottom: 0.8rem; font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .summary-row.total {
+    font-size: 1.2rem; font-weight: 500;
+    color: var(--text); margin-top: 1rem;
+    padding-top: 1rem; border-top: 1px solid var(--border);
+  }
+  .summary-row.total .val { color: var(--accent); font-size: 1.3rem; }
+
+  .checkout-btn {
+    width: 100%; margin-top: 2rem;
+    padding: 1.1rem; background: var(--accent);
+    color: var(--bg); border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500; font-size: 1rem;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .checkout-btn:hover { background: var(--accent2); }
+  .checkout-btn:disabled {
+    background: var(--border); color: var(--muted); cursor: not-allowed;
+  }
+
+  .delivery-fee { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="back-btn" onclick="window.location='menu.html'">← Меню</button>
+  <div class="logo">Линуксоед</div>
+  <span></span>
+</header>
+
+<div class="page-layout">
+  <div class="cart-items">
+    <h1 class="cart-title">Корзина</h1>
+    <p class="cart-subtitle" id="cartSubtitle"></p>
+    <div id="cartList"></div>
+  </div>
+
+  <div class="order-summary">
+    <div class="summary-title">Итог заказа</div>
+    <div class="summary-row"><span>Блюда</span><span id="sumItems">0 ₽</span></div>
+    <div class="summary-row"><span>Доставка</span><span class="delivery-fee">150 ₽</span></div>
+    <div class="summary-row total"><span>Итого</span><span class="val" id="sumTotal">0 ₽</span></div>
+    <button class="checkout-btn" id="checkoutBtn" onclick="goCheckout()" disabled>
+      Оформить заказ
+    </button>
+  </div>
+</div>
+
+<script>
+  const DELIVERY_FEE = 150;
+
+  function getCart() { return JSON.parse(localStorage.getItem('cart') || '[]'); }
+  function saveCart(cart) { localStorage.setItem('cart', JSON.stringify(cart)); }
+
+  function render() {
+    const cart = getCart();
+    const list = document.getElementById('cartList');
+
+    if (cart.length === 0) {
+      list.innerHTML = `
+        <div class="empty-cart">
+          <div class="icon">🛒</div>
+          <p>Корзина пуста</p>
+          <button class="go-catalog-btn" onclick="window.location='index.html'">Выбрать ресторан</button>
+        </div>`;
+      document.getElementById('cartSubtitle').textContent = '';
+      document.getElementById('sumItems').textContent = '0 ₽';
+      document.getElementById('sumTotal').textContent = `${DELIVERY_FEE} ₽`;
+      document.getElementById('checkoutBtn').disabled = true;
+      return;
+    }
+
+    const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
+    document.getElementById('cartSubtitle').textContent = `${totalItems} ${declension(totalItems, ['блюдо','блюда','блюд'])}`;
+
+    list.innerHTML = cart.map(item => `
+      <div class="cart-item" id="item-${item.dishId}">
+        <div class="item-info">
+          <h3>${item.name}</h3>
+          <div class="unit-price">${item.price} ₽ за шт.</div>
+        </div>
+        <div class="qty-controls">
+          <button class="qty-btn" onclick="changeQty('${item.dishId}', -1)">−</button>
+          <div class="qty-display">${item.quantity}</div>
+          <button class="qty-btn" onclick="changeQty('${item.dishId}', 1)">+</button>
+        </div>
+        <div class="item-total">${item.price * item.quantity} ₽</div>
+        <button class="delete-btn" onclick="removeItem('${item.dishId}')" title="Удалить">✕</button>
+      </div>
+    `).join('');
+
+    const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+    document.getElementById('sumItems').textContent = `${subtotal} ₽`;
+    document.getElementById('sumTotal').textContent = `${subtotal + DELIVERY_FEE} ₽`;
+    document.getElementById('checkoutBtn').disabled = false;
+  }
+
+  const MAX_QTY_PER_ITEM = 10;
+  const MAX_TOTAL_ITEMS  = 30;
+
+  function changeQty(dishId, delta) {
+    const cart = getCart();
+    const idx = cart.findIndex(i => i.dishId === dishId);
+    if (idx === -1) return;
+
+    if (delta > 0) {
+      // Лимит на одну позицию
+      if (cart[idx].quantity >= MAX_QTY_PER_ITEM) {
+        showLimitToast(`Максимум ${MAX_QTY_PER_ITEM} штук одного блюда`);
+        return;
+      }
+      // Лимит на общее количество
+      const total = cart.reduce((s, i) => s + i.quantity, 0);
+      if (total >= MAX_TOTAL_ITEMS) {
+        showLimitToast(`Максимум ${MAX_TOTAL_ITEMS} позиций в корзине`);
+        return;
+      }
+    }
+
+    cart[idx].quantity += delta;
+    if (cart[idx].quantity <= 0) cart.splice(idx, 1);
+    saveCart(cart);
+    render();
+  }
+
+  function showLimitToast(msg) {
+    // Временно показываем сообщение в области ошибки
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:#2a1515;border-left:3px solid #e84747;color:#e84747;padding:0.8rem 1.5rem;font-size:0.9rem;z-index:999';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2500);
+  }
+
+  function removeItem(dishId) {
+    const cart = getCart().filter(i => i.dishId !== dishId);
+    saveCart(cart);
+    render();
+  }
+
+  function goCheckout() {
+    window.location.href = 'checkout.html';
+  }
+
+  function declension(n, forms) {
+    const mod = n % 100;
+    if (mod >= 11 && mod <= 19) return forms[2];
+    const last = n % 10;
+    if (last === 1) return forms[0];
+    if (last >= 2 && last <= 4) return forms[1];
+    return forms[2];
+  }
+
+  render();
+</script>
+</body>
+</html>

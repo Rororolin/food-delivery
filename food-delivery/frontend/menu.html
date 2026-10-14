@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Меню — Линуксоед</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e0c;
+    --surface: #1a1814;
+    --card: #211f1b;
+    --accent: #e8c547;
+    --accent2: #e87d47;
+    --text: #f0ece3;
+    --muted: #7a7568;
+    --border: #2e2b24;
+    --green: #47e8a0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  header {
+    padding: 1.5rem 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0;
+    background: var(--bg); z-index: 100;
+  }
+
+  .back-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--muted); padding: 0.5rem 1rem;
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+    transition: all 0.2s; font-size: 0.9rem;
+  }
+  .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .logo { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900; color: var(--accent); }
+
+  .cart-btn {
+    background: var(--accent); color: var(--bg); border: none;
+    padding: 0.6rem 1.4rem; font-family: 'DM Sans', sans-serif;
+    font-weight: 500; font-size: 0.9rem; cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .cart-btn:hover { background: var(--accent2); }
+  .cart-btn .badge {
+    background: var(--bg); color: var(--accent);
+    border-radius: 50%; width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700;
+  }
+
+  .restaurant-header {
+    padding: 3rem 3rem 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .restaurant-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 900; margin-bottom: 0.5rem;
+  }
+
+  .restaurant-header .sub { color: var(--muted); font-size: 0.9rem; }
+
+  .menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1px; background: var(--border);
+    margin: 0;
+  }
+
+  .menu-item {
+    background: var(--card);
+    padding: 1.8rem;
+    display: flex; flex-direction: column;
+    justify-content: space-between; gap: 1rem;
+    transition: background 0.2s;
+  }
+  .menu-item:hover { background: #27241e; }
+
+  .menu-item-info h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem; font-weight: 700;
+    margin-bottom: 0.4rem;
+  }
+
+  .menu-item-info p {
+    color: var(--muted); font-size: 0.85rem; line-height: 1.5;
+  }
+
+  .menu-item-footer {
+    display: flex; align-items: center;
+    justify-content: space-between;
+  }
+
+  .price {
+    font-size: 1.3rem; font-weight: 500;
+    color: var(--accent);
+  }
+  .price span { font-size: 0.8rem; color: var(--muted); }
+
+  .add-controls {
+    display: flex; align-items: center; gap: 0;
+  }
+
+  .qty-btn {
+    width: 32px; height: 32px;
+    background: var(--border); border: none;
+    color: var(--text); font-size: 1.1rem;
+    cursor: pointer; transition: background 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .qty-btn:hover { background: var(--accent); color: var(--bg); }
+
+  .qty-display {
+    width: 36px; height: 32px;
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 500; font-size: 0.95rem;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .add-btn {
+    padding: 0.5rem 1rem;
+    background: var(--accent); color: var(--bg);
+    border: none; font-family: 'DM Sans', sans-serif;
+    font-weight: 500; font-size: 0.85rem;
+    cursor: pointer; transition: background 0.2s;
+    height: 32px;
+  }
+  .add-btn:hover { background: var(--accent2); }
+
+  .toast {
+    position: fixed; bottom: 2rem; left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--card); color: var(--text);
+    border-left: 3px solid var(--green);
+    padding: 0.8rem 1.5rem; font-weight: 500;
+    transition: transform 0.3s; z-index: 999;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .loading { padding: 3rem; color: var(--muted); font-style: italic; }
+  .section { padding: 2rem 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="back-btn" onclick="window.location='index.html'">← Назад</button>
+  <div class="logo">Линуксоед</div>
+  <button class="cart-btn" onclick="window.location='cart.html'">
+    🛒 Корзина
+    <span class="badge" id="cartBadge">0</span>
+  </button>
+</header>
+
+<div class="restaurant-header">
+  <h1 id="restaurantName">Загрузка...</h1>
+  <div class="sub" id="restaurantSub"></div>
+</div>
+
+<div class="section">
+  <div id="menuContainer" class="menu-grid"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const USER_ID = 'u1';
+  let cartCount = 0;
+
+  function getCart() {
+    return JSON.parse(localStorage.getItem('cart') || '[]');
+  }
+  function saveCart(cart) {
+    localStorage.setItem('cart', JSON.stringify(cart));
+    updateBadge();
+  }
+  function updateBadge() {
+    const cart = getCart();
+    const total = cart.reduce((s, i) => s + i.quantity, 0);
+    document.getElementById('cartBadge').textContent = total;
+  }
+  function getItemQty(dishId) {
+    const cart = getCart();
+    const item = cart.find(i => i.dishId === dishId);
+    return item ? item.quantity : 0;
+  }
+
+  function renderQty(dishId) {
+    const qty = getItemQty(dishId);
+    const footer = document.querySelector(`[data-dish="${dishId}"] .menu-item-footer`);
+    if (!footer) return;
+
+    if (qty === 0) {
+      footer.querySelector('.add-controls').innerHTML = `
+        <button class="add-btn" onclick="addItem('${dishId}')">+ В корзину</button>
+      `;
+    } else {
+      footer.querySelector('.add-controls').innerHTML = `
+        <div style="display:flex;align-items:center;gap:0">
+          <button class="qty-btn" onclick="changeQty('${dishId}', -1)">−</button>
+          <div class="qty-display">${qty}</div>
+          <button class="qty-btn" onclick="changeQty('${dishId}', 1)">+</button>
+        </div>
+      `;
+    }
+  }
+
+  const MAX_QTY_PER_ITEM = 10;
+  const MAX_TOTAL_ITEMS  = 30;
+
+  async function addItem(dishId) {
+    const cart = getCart();
+    const menu = JSON.parse(localStorage.getItem('currentMenu') || '[]');
+    const dish = menu.find(m => m.id === dishId);
+    if (!dish) return;
+
+    const totalItems = cart.reduce((s, i) => s + i.quantity, 0);
+    if (totalItems >= MAX_TOTAL_ITEMS) {
+      showToast(`Максимум ${MAX_TOTAL_ITEMS} позиций в корзине`, true);
+      return;
+    }
+
+    const existing = cart.find(i => i.dishId === dishId);
+    if (existing) {
+      if (existing.quantity >= MAX_QTY_PER_ITEM) {
+        showToast(`Максимум ${MAX_QTY_PER_ITEM} штук одного блюда`, true);
+        return;
+      }
+      existing.quantity += 1;
+    } else {
+      cart.push({ dishId: dish.id, name: dish.name, price: dish.price, quantity: 1 });
+    }
+    saveCart(cart);
+    renderQty(dishId);
+    showToast(`${dish.name} добавлено`);
+
+    try {
+      await fetch('/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: USER_ID, action: 'add', dishId, quantity: 1 })
+      });
+    } catch(e) {}
+  }
+
+  async function changeQty(dishId, delta) {
+    const cart = getCart();
+    const idx = cart.findIndex(i => i.dishId === dishId);
+    if (idx === -1) return;
+
+    if (delta > 0) {
+      if (cart[idx].quantity >= MAX_QTY_PER_ITEM) {
+        showToast(`Максимум ${MAX_QTY_PER_ITEM} штук одного блюда`, true);
+        return;
+      }
+      const total = cart.reduce((s, i) => s + i.quantity, 0);
+      if (total >= MAX_TOTAL_ITEMS) {
+        showToast(`Максимум ${MAX_TOTAL_ITEMS} позиций в корзине`, true);
+        return;
+      }
+    }
+
+    cart[idx].quantity += delta;
+    if (cart[idx].quantity <= 0) cart.splice(idx, 1);
+    saveCart(cart);
+    renderQty(dishId);
+
+    try {
+      await fetch('/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: USER_ID, action: delta > 0 ? 'add' : 'remove', dishId, quantity: 1 })
+      });
+    } catch(e) {}
+  }
+
+  function showToast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    t.textContent = isError ? '⚠ ' + msg : '✓ ' + msg;
+    t.style.background = isError ? 'rgba(232,71,71,0.15)' : '';
+    t.style.borderLeftColor = isError ? 'var(--red, #e84747)' : 'var(--green)';
+    t.classList.add('show');
+    setTimeout(() => { t.classList.remove('show'); t.style.background = ''; }, 2500);
+  }
+
+  async function loadMenu() {
+    const restaurantId = localStorage.getItem('restaurantId');
+    const restaurantName = localStorage.getItem('restaurantName') || 'Ресторан';
+
+    document.getElementById('restaurantName').textContent = restaurantName;
+
+    if (!restaurantId) {
+      document.getElementById('menuContainer').innerHTML = '<div class="loading">Ресторан не выбран</div>';
+      return;
+    }
+
+    document.getElementById('menuContainer').innerHTML = '<div class="loading">Загружаем меню...</div>';
+
+    try {
+      const res = await fetch(`/restaurants/${restaurantId}/menu`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const menu = data.menu || [];
+
+      localStorage.setItem('currentMenu', JSON.stringify(menu));
+
+      if (menu.length === 0) {
+        document.getElementById('menuContainer').innerHTML = '<div class="loading">Меню пусто</div>';
+        return;
+      }
+
+      document.getElementById('restaurantSub').textContent = `${menu.length} блюд в меню`;
+      document.getElementById('menuContainer').innerHTML = menu.map(item => `
+        <div class="menu-item" data-dish="${item.id}">
+          <div class="menu-item-info">
+            <h3>${item.name}</h3>
+            <p>${item.description}</p>
+          </div>
+          <div class="menu-item-footer">
+            <div class="price">${item.price} <span>₽</span></div>
+            <div class="add-controls">
+              <button class="add-btn" onclick="addItem('${item.id}')">+ В корзину</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      // Восстановить количества из localStorage
+      menu.forEach(item => renderQty(item.id));
+      updateBadge();
+
+    } catch(e) {
+      document.getElementById('menuContainer').innerHTML = '<div class="loading">Не удалось загрузить меню</div>';
+    }
+  }
+
+  loadMenu();
+</script>
+</body>
+</html>

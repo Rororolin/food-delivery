@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Оформление заказа — Линуксоед</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e0c; --surface: #1a1814; --card: #211f1b;
+    --accent: #e8c547; --accent2: #e87d47; --text: #f0ece3;
+    --muted: #7a7568; --border: #2e2b24; --green: #47e8a0; --red: #e84747;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  header {
+    padding: 1.5rem 3rem; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100;
+  }
+  .back-btn {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    padding: 0.5rem 1rem; font-family: 'DM Sans', sans-serif; cursor: pointer;
+    transition: all 0.2s; font-size: 0.9rem;
+  }
+  .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .logo { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900; color: var(--accent); }
+
+  #checkoutView {
+    display: grid; grid-template-columns: 1fr 360px;
+    gap: 0; min-height: calc(100vh - 70px);
+  }
+  @media (max-width: 800px) { #checkoutView { grid-template-columns: 1fr; } }
+
+  .form-section { padding: 3rem; border-right: 1px solid var(--border); }
+
+  .page-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem; font-weight: 900; margin-bottom: 2.5rem;
+  }
+
+  .form-group { margin-bottom: 1.5rem; }
+  .form-group label {
+    display: block; font-size: 0.75rem; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.5rem;
+  }
+  .form-group input {
+    width: 100%; padding: 0.9rem 1rem;
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 1rem; outline: none; transition: border-color 0.2s, background 0.2s;
+  }
+  .form-group input:focus { border-color: var(--accent); }
+  .form-group input::placeholder { color: var(--muted); }
+  .form-group input.error { border-color: var(--red) !important; background: #200f0f; }
+  .field-error { color: var(--red); font-size: 0.8rem; margin-top: 0.4rem; display: none; }
+  .field-error.show { display: block; }
+
+  .payment-options { display: flex; gap: 1px; background: var(--border); }
+  .pay-option {
+    flex: 1; padding: 0.9rem; background: var(--card); border: none;
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem; cursor: pointer; transition: all 0.2s; text-align: center;
+  }
+  .pay-option.active { background: var(--accent); color: var(--bg); font-weight: 500; }
+  .pay-option:not(.active):hover { background: var(--surface); color: var(--text); }
+
+  .order-summary { padding: 3rem 2.5rem; position: sticky; top: 70px; align-self: start; }
+  .summary-title {
+    font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700;
+    margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);
+  }
+  .summary-item { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 0.4rem 0; color: var(--muted); }
+  .summary-item .name { color: var(--text); }
+  .summary-divider { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+  .summary-total { display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 500; }
+  .summary-total .val { color: var(--accent); }
+
+  .place-btn {
+    width: 100%; margin-top: 2rem; padding: 1.1rem; background: var(--accent);
+    color: var(--bg); border: none; font-family: 'DM Sans', sans-serif;
+    font-weight: 500; font-size: 1rem; cursor: pointer; transition: background 0.2s;
+  }
+  .place-btn:hover { background: var(--accent2); }
+  .place-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+  .error-msg {
+    margin-top: 1rem; padding: 0.8rem 1rem;
+    background: #2a1515; border-left: 3px solid var(--red);
+    color: var(--red); font-size: 0.9rem;
+  }
+
+  #trackingView { display: none; padding: 4rem 3rem; max-width: 680px; margin: 0 auto; }
+
+  .order-confirmed { text-align: center; margin-bottom: 3rem; }
+  .confirm-icon { font-size: 3rem; margin-bottom: 1rem; animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+  .order-confirmed h1 { font-family: 'Playfair Display', serif; font-size: 2.5rem; font-weight: 900; margin-bottom: 0.5rem; }
+  .order-confirmed .order-id { color: var(--muted); font-size: 0.85rem; }
+  .order-confirmed .order-id span { color: var(--accent); }
+
+  .status-tracker { margin: 3rem 0; }
+  .status-step { display: flex; gap: 1.5rem; position: relative; padding-bottom: 2rem; }
+  .status-step:last-child { padding-bottom: 0; }
+  .status-step:not(:last-child)::before {
+    content: ''; position: absolute; left: 15px; top: 32px; width: 2px; bottom: 0; background: var(--border);
+  }
+  .status-step.done::before { background: var(--green); }
+  .step-dot {
+    width: 32px; height: 32px; flex-shrink: 0; border: 2px solid var(--border); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: var(--muted);
+    background: var(--bg); position: relative; z-index: 1; transition: all 0.4s;
+  }
+  .status-step.done .step-dot { background: var(--green); border-color: var(--green); color: #0a2a1a; font-weight: 700; }
+  .status-step.active .step-dot { border-color: var(--accent); color: var(--accent); animation: pulse 1.5s infinite; }
+  .status-step.cancelled .step-dot { background: var(--red); border-color: var(--red); color: #fff; }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(232,197,71,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(232,197,71,0); }
+  }
+  .step-info { padding-top: 4px; }
+  .step-info h3 { font-size: 1rem; font-weight: 500; margin-bottom: 0.2rem; }
+  .step-info p { font-size: 0.85rem; color: var(--muted); }
+  .status-step.done .step-info h3 { color: var(--green); }
+  .status-step.active .step-info h3 { color: var(--accent); }
+  .status-step.cancelled .step-info h3 { color: var(--red); }
+
+  .delivery-info {
+    padding: 1.5rem; background: var(--card); border-left: 3px solid var(--accent);
+    display: flex; justify-content: space-between; align-items: center; margin: 2rem 0;
+  }
+  .delivery-info .label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .delivery-info .time { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+
+  .new-order-btn {
+    width: 100%; padding: 1rem; background: none; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: 1rem; cursor: pointer; transition: all 0.2s; margin-top: 1rem;
+  }
+  .new-order-btn:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="back-btn" id="backBtn" onclick="window.location='cart.html'">← Корзина</button>
+  <div class="logo">Линуксоед</div>
+  <span></span>
+</header>
+
+<div id="checkoutView">
+  <div class="form-section">
+    <h1 class="page-title">Оформление</h1>
+
+    <div class="form-group">
+      <label>Адрес доставки *</label>
+      <input type="text" id="address" placeholder="Улица, дом, квартира">
+      <div class="field-error" id="addressError">Введи адрес доставки</div>
+    </div>
+
+    <div class="form-group">
+      <label>Имя *</label>
+      <input type="text" id="userName" placeholder="Как к тебе обращаться?">
+      <div class="field-error" id="userNameError">Введи своё имя</div>
+    </div>
+
+    <div class="form-group">
+      <label>Телефон *</label>
+      <input type="tel" id="phone" placeholder="+7 (999) 000-00-00">
+      <div class="field-error" id="phoneError">Введи номер телефона</div>
+    </div>
+
+    <div class="form-group">
+      <label>Способ оплаты</label>
+      <div class="payment-options">
+        <button class="pay-option active" onclick="selectPayment('card', this)">💳 Картой</button>
+        <button class="pay-option" onclick="selectPayment('cash', this)">💵 Наличными</button>
+        <button class="pay-option" onclick="selectPayment('online', this)">📱 Онлайн</button>
+      </div>
+      <div id="paymentSuccess" style="display:none;margin-top:0.8rem;padding:0.7rem 1rem;background:rgba(71,232,160,0.12);border-left:3px solid var(--green);color:var(--green);font-size:0.88rem">
+        ✓ Оплата прошла успешно!
+      </div>
+    </div>
+
+    <div id="formError"></div>
+  </div>
+
+  <div class="order-summary">
+    <div class="summary-title">Ваш заказ</div>
+    <div id="summaryItems"></div>
+    <hr class="summary-divider">
+    <div style="display:flex;justify-content:space-between;font-size:0.9rem;color:var(--muted);margin-bottom:0.5rem">
+      <span>Доставка</span><span>150 ₽</span>
+    </div>
+    <div class="summary-total">
+      <span>Итого</span><span class="val" id="totalPrice">0 ₽</span>
+    </div>
+    <button class="place-btn" id="placeBtn" onclick="placeOrder()">Подтвердить заказ</button>
+  </div>
+</div>
+
+<div id="trackingView">
+  <div class="order-confirmed">
+    <div class="confirm-icon" id="confirmIcon">✅</div>
+    <h1 id="trackingTitle">Заказ принят!</h1>
+    <div class="order-id">ID: <span id="orderId">—</span></div>
+  </div>
+
+  <div class="delivery-info">
+    <div>
+      <div class="label">Ожидаемое время доставки</div>
+      <div class="time" id="deliveryTime">~45 мин</div>
+    </div>
+    <div style="font-size:2rem">🚴</div>
+  </div>
+
+  <div class="status-tracker" id="statusTracker"></div>
+  <button class="new-order-btn" onclick="newOrder()">Сделать новый заказ</button>
+</div>
+
+<script>
+  const USER_ID      = 'u1';
+  const DELIVERY_FEE = 150;
+  const ADMIN_API    = 'http://localhost:8081';
+  const COURIER_API  = 'http://localhost:8082';
+
+  // Маппинг статусов courier/admin → клиентских
+  const STATUS_MAP = {
+    'available':        'created',
+    'assigned':         'courier_assigned',
+    'completed':        'delivered',
+    'cancelled':        'cancelled',
+    'pending':          'created',
+    'delivering':       'in_transit',
+    'delivered':        'delivered',
+    'created':          'created',
+    'preparing':        'preparing',
+    'courier_assigned': 'courier_assigned',
+    'in_transit':       'in_transit',
+  };
+
+  const STATUSES = [
+    { key: 'created',          label: 'Заказ принят',   desc: 'Ресторан получил ваш заказ' },
+    { key: 'preparing',        label: 'Готовится',       desc: 'Шеф-повар готовит блюда' },
+    { key: 'courier_assigned', label: 'Передан курьеру', desc: 'Курьер забрал ваш заказ' },
+    { key: 'in_transit',       label: 'В пути',          desc: 'Курьер едет к вам' },
+    { key: 'delivered',        label: 'Доставлен',       desc: 'Приятного аппетита!' },
+  ];
+
+  let selectedPayment = 'card';
+  let currentOrderId  = null;
+  let trackingInterval = null;
+
+  // Запрос с таймаутом — если сервер не отвечает за 3 сек, идём дальше
+  async function fetchWithTimeout(url, options = {}, ms = 3000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  function selectPayment(method, el) {
+    selectedPayment = method;
+    document.querySelectorAll('.pay-option').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    const banner = document.getElementById('paymentSuccess');
+    if (method === 'card' || method === 'online') {
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
+  // Показываем баннер по умолчанию (card выбран по умолчанию)
+  window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('paymentSuccess').style.display = 'block';
+
+    // Адрес пользователь вводит сам
+
+    // Подставляем имя и телефон из профиля
+    const profile = JSON.parse(localStorage.getItem('clientProfile') || '{}');
+    if (profile.name)  document.getElementById('userName').value = profile.name;
+    if (profile.phone) document.getElementById('phone').value = profile.phone;
+  });
+
+  function getCart() { return JSON.parse(localStorage.getItem('cart') || '[]'); }
+
+  function renderSummary() {
+    const cart = getCart();
+    document.getElementById('summaryItems').innerHTML = cart.map(item => `
+      <div class="summary-item">
+        <span class="name">${item.name} ×${item.quantity}</span>
+        <span>${item.price * item.quantity} ₽</span>
+      </div>`).join('');
+    const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+    document.getElementById('totalPrice').textContent = `${subtotal + DELIVERY_FEE} ₽`;
+  }
+
+  function clearError(fieldId) {
+    document.getElementById(fieldId).classList.remove('error');
+    document.getElementById(fieldId + 'Error').classList.remove('show');
+  }
+  function showError(fieldId, msg) {
+    const input = document.getElementById(fieldId);
+    const err   = document.getElementById(fieldId + 'Error');
+    input.classList.add('error');
+    if (msg) err.textContent = msg;
+    err.classList.add('show');
+  }
+
+  // Убираем ошибку при вводе
+  ['address','userName','phone'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => clearError(id));
+  });
+
+  async function placeOrder() {
+    // Сброс ошибок
+    ['address','userName','phone'].forEach(id => clearError(id));
+    document.getElementById('formError').innerHTML = '';
+
+    const address  = document.getElementById('address').value.trim();
+    const userName = document.getElementById('userName').value.trim();
+    const phone    = document.getElementById('phone').value.trim();
+
+    // Валидация всех полей
+    let hasError = false;
+    if (!address)  { showError('address', null);  hasError = true; }
+    if (!userName) { showError('userName', null);  hasError = true; }
+    if (!phone) {
+      showError('phone', 'Введи номер телефона');
+      hasError = true;
+    } else {
+      // Российский номер: +7 или 8, затем 10 цифр
+      const digits = phone.replace(/\D/g, '');
+      const isRussian = /^(\+7|8)\d{10}$/.test(phone.replace(/[\s\-\(\)]/g, '')) ||
+                        (digits.length === 11 && (digits[0] === '7' || digits[0] === '8'));
+      if (!isRussian || digits.length !== 11) {
+        showError('phone', 'Введи российский номер: +7 (XXX) XXX-XX-XX');
+        hasError = true;
+      }
+    }
+    if (hasError) return;
+
+    const cart = getCart();
+    if (cart.length === 0) {
+      document.getElementById('formError').innerHTML = '<div class="error-msg">Корзина пуста</div>';
+      return;
+    }
+
+    const btn = document.getElementById('placeBtn');
+    btn.disabled = true;
+    btn.textContent = 'Оформляем...';
+
+    try {
+      // 0. Регистрируем клиента чтобы он появился у админа
+      try {
+        await fetchWithTimeout('/users/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: USER_ID, name: userName, phone })
+        });
+      } catch(e) { /* не блокируем заказ */ }
+
+      // 1. Отправляем заказ на клиентский сервер
+      const res = await fetch('/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: USER_ID,
+          cart: cart.map(i => ({ dishId: i.dishId, quantity: i.quantity })),
+          address,
+          paymentMethod: selectedPayment
+        })
+      });
+
+      if (!res.ok) {
+        let errMsg = 'Ошибка сервера';
+        try {
+          const text = await res.text();
+          const errData = JSON.parse(text);
+          if (errData.error) errMsg = errData.error;
+        } catch(_) {}
+        throw new Error(errMsg);
+      }
+      const data = await res.json();
+
+      // 2. Синхронизируем с админом (не блокируем если недоступен)
+      const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+      try {
+        await fetchWithTimeout(ADMIN_API + '/admin/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id:          data.orderId,
+            customer_id: userName + ' · ' + phone,
+            totalAmount: subtotal + DELIVERY_FEE,
+            is_paid:     selectedPayment !== 'cash',
+          })
+        });
+      } catch(e) {
+        console.warn('Админ-сервер недоступен:', e.message);
+      }
+
+      // 3. Отправляем заказ курьеру (не блокируем если недоступен)
+      try {
+        const restaurantName = localStorage.getItem('restaurantName') || 'Ресторан';
+        await fetchWithTimeout(COURIER_API + '/courier/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id:                  data.orderId,
+            user_id:             USER_ID,
+            customer_name:       userName + ' · ' + phone,
+            restaurant_name:     restaurantName,
+            restaurant_address:  'Адрес ресторана',
+            restaurant_location: { lat: 59.934, lon: 30.335 },
+            delivery_address:    address,
+            delivery_location:   { lat: 59.940, lon: 30.350 },
+            items_count:         cart.reduce((s, i) => s + i.quantity, 0),
+            delivery_fee:        DELIVERY_FEE,
+            total_amount:        subtotal + DELIVERY_FEE,
+          })
+        });
+      } catch(e) {
+        console.warn('Курьерский сервер недоступен:', e.message);
+      }
+
+      localStorage.setItem('cart', '[]');
+      currentOrderId = data.orderId;
+
+      // Сохраняем профиль клиента
+      const profile = JSON.parse(localStorage.getItem('clientProfile') || '{}');
+      profile.id    = USER_ID;
+      profile.name  = userName;
+      profile.phone = phone;
+      if (address) profile.address = address;
+      localStorage.setItem('clientProfile', JSON.stringify(profile));
+
+      // Сохраняем заказ в историю
+      const restaurantName = localStorage.getItem('restaurantName') || 'Ресторан';
+      const orders = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+      orders.unshift({
+        id:             data.orderId,
+        restaurantName: restaurantName,
+        address:        address,
+        totalAmount:    cart.reduce((s, i) => s + i.price * i.quantity, 0) + DELIVERY_FEE,
+        status:         'created',
+        createdAt:      new Date().toISOString(),
+      });
+      localStorage.setItem('orderHistory', JSON.stringify(orders));
+
+      // Переходим на страницу отслеживания
+      localStorage.setItem('trackOrderId', data.orderId);
+      window.location.href = 'track.html';
+
+    } catch(e) {
+      btn.disabled = false;
+      btn.textContent = 'Подтвердить заказ';
+      const networkErrors = ['Failed to fetch', 'NetworkError', 'Load failed'];
+      const isNetwork = !e.message || networkErrors.some(s => e.message.includes(s)) || e.name === 'AbortError';
+      const msg = isNetwork
+        ? 'Не удалось оформить заказ. Убедись что сервер запущен.'
+        : e.message;
+      document.getElementById('formError').innerHTML =
+        '<div class="error-msg">' + msg + '</div>';
+    }
+  }
+
+  function showTracking(orderData) {
+    document.getElementById('checkoutView').style.display = 'none';
+    document.getElementById('backBtn').style.display = 'none';
+    document.getElementById('trackingView').style.display = 'block';
+    document.getElementById('orderId').textContent = orderData.orderId;
+
+    const mins = Math.max(1, Math.round((new Date(orderData.estimatedDelivery) - new Date()) / 60000));
+    document.getElementById('deliveryTime').textContent = `~${mins} мин`;
+
+    renderTracker('created');
+
+    // Опрашиваем статус у админа каждые 5 секунд
+    trackingInterval = setInterval(() => pollStatus(orderData.orderId), 5000);
+  }
+
+  async function pollStatus(orderId) {
+    // Сначала спрашиваем курьерский сервер
+    try {
+      const res = await fetchWithTimeout(COURIER_API + '/courier/orders/' + orderId, {}, 2000);
+      if (res.ok) {
+        const order = await res.json();
+        const status = STATUS_MAP[order.status] || 'created';
+        renderTracker(status);
+        if (order.status === 'completed' || order.status === 'cancelled') {
+          clearInterval(trackingInterval);
+        }
+        return;
+      }
+    } catch(e) { /* courier offline */ }
+
+    // Запасной вариант — спрашиваем админа
+    try {
+      const res = await fetchWithTimeout(ADMIN_API + '/admin/orders/' + orderId, {}, 2000);
+      if (!res.ok) return;
+      const order = await res.json();
+      const status = STATUS_MAP[order.status] || 'created';
+      renderTracker(status);
+      if (order.status === 'delivered' || order.status === 'cancelled') {
+        clearInterval(trackingInterval);
+      }
+    } catch(e) { /* admin offline */ }
+  }
+
+  function renderTracker(currentStatus) {
+    if (currentStatus === 'cancelled') {
+      document.getElementById('confirmIcon').textContent = '❌';
+      document.getElementById('trackingTitle').textContent = 'Заказ отменён';
+      document.getElementById('statusTracker').innerHTML = `
+        <div class="status-step cancelled">
+          <div class="step-dot">✕</div>
+          <div class="step-info">
+            <h3>Заказ отменён</h3>
+            <p>Администратор отменил ваш заказ</p>
+          </div>
+        </div>`;
+      return;
+    }
+
+    const currentIdx = STATUSES.findIndex(s => s.key === currentStatus);
+    document.getElementById('statusTracker').innerHTML = STATUSES.map((s, i) => {
+      const isDone = i < currentIdx, isActive = i === currentIdx;
+      const cls = isDone ? 'done' : isActive ? 'active' : '';
+      return `
+        <div class="status-step ${cls}">
+          <div class="step-dot">${isDone ? '✓' : i + 1}</div>
+          <div class="step-info"><h3>${s.label}</h3><p>${s.desc}</p></div>
+        </div>`;
+    }).join('');
+  }
+
+  function newOrder() {
+    clearInterval(trackingInterval);
+    window.location.href = 'index.html';
+  }
+
+  renderSummary();
+</script>
+</body>
+</html>

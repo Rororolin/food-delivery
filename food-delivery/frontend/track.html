@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Отслеживание заказа — Линуксоед</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e0c; --surface: #1a1814; --card: #211f1b;
+    --accent: #e8c547; --accent2: #e87d47;
+    --text: #f0ece3; --muted: #7a7568; --border: #2e2b24;
+    --green: #47e8a0; --red: #e84747;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  header {
+    padding: 1.5rem 3rem; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100;
+  }
+  .back-btn {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    padding: 0.5rem 1rem; font-family: 'DM Sans', sans-serif; cursor: pointer;
+    transition: all 0.2s; font-size: 0.9rem;
+  }
+  .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .logo { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900; color: var(--accent); }
+
+  .page { padding: 4rem 3rem; max-width: 680px; margin: 0 auto; }
+
+  .order-confirmed { text-align: center; margin-bottom: 3rem; }
+  .confirm-icon { font-size: 3rem; margin-bottom: 1rem; }
+  .order-confirmed h1 { font-family: 'Playfair Display', serif; font-size: 2.5rem; font-weight: 900; margin-bottom: 0.5rem; }
+  .order-id { color: var(--muted); font-size: 0.85rem; }
+  .order-id span { color: var(--accent); }
+
+  .delivery-info {
+    padding: 1.5rem; background: var(--card); border-left: 3px solid var(--accent);
+    display: flex; justify-content: space-between; align-items: center; margin: 2rem 0;
+  }
+  .delivery-info .label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .delivery-info .time { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+
+  .status-tracker { margin: 3rem 0; }
+  .status-step { display: flex; gap: 1.5rem; position: relative; padding-bottom: 2rem; }
+  .status-step:last-child { padding-bottom: 0; }
+  .status-step:not(:last-child)::before {
+    content: ''; position: absolute; left: 15px; top: 32px; width: 2px; bottom: 0; background: var(--border);
+  }
+  .status-step.done::before { background: var(--green); }
+  .step-dot {
+    width: 32px; height: 32px; flex-shrink: 0; border: 2px solid var(--border); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: var(--muted);
+    background: var(--bg); position: relative; z-index: 1; transition: all 0.4s;
+  }
+  .status-step.done .step-dot { background: var(--green); border-color: var(--green); color: #0a2a1a; font-weight: 700; }
+  .status-step.active .step-dot { border-color: var(--accent); color: var(--accent); animation: pulse 1.5s infinite; }
+  .status-step.cancelled .step-dot { background: var(--red); border-color: var(--red); color: #fff; }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(232,197,71,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(232,197,71,0); }
+  }
+  .step-info { padding-top: 4px; }
+  .step-info h3 { font-size: 1rem; font-weight: 500; margin-bottom: 0.2rem; }
+  .step-info p { font-size: 0.85rem; color: var(--muted); }
+  .status-step.done .step-info h3 { color: var(--green); }
+  .status-step.active .step-info h3 { color: var(--accent); }
+  .status-step.cancelled .step-info h3 { color: var(--red); }
+
+  .action-btn {
+    width: 100%; padding: 1rem; background: none; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: 1rem; cursor: pointer; transition: all 0.2s; margin-top: 1rem;
+  }
+  .action-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .not-found { padding: 4rem 0; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="back-btn" onclick="window.location='profile.html'">← Мои заказы</button>
+  <div class="logo">Линуксоед</div>
+  <span></span>
+</header>
+
+<div class="page" id="pageContent">
+  <div class="not-found">Загрузка...</div>
+</div>
+
+<script>
+  const COURIER_API = 'http://localhost:8082';
+
+  const STATUSES = [
+    { key: 'created',          label: 'Заказ принят',    desc: 'Ресторан получил ваш заказ' },
+    { key: 'preparing',        label: 'Готовится',        desc: 'Шеф-повар готовит блюда' },
+    { key: 'courier_assigned', label: 'Передан курьеру',  desc: 'Курьер забрал ваш заказ' },
+    { key: 'in_transit',       label: 'В пути',           desc: 'Курьер едет к вам' },
+    { key: 'delivered',        label: 'Доставлен',        desc: 'Приятного аппетита!' },
+  ];
+
+  const STATUS_MAP = {
+    'available':  'created',
+    'assigned':   'courier_assigned',
+    'delivering': 'in_transit',
+    'completed':  'delivered',
+  };
+
+  let orderId = null;
+  let trackInterval = null;
+
+  function getOrders() {
+    return JSON.parse(localStorage.getItem('orderHistory') || '[]');
+  }
+
+  function updateOrderStatus(id, status) {
+    const orders = getOrders();
+    const idx = orders.findIndex(o => o.id === id);
+    if (idx !== -1) { orders[idx].status = status; localStorage.setItem('orderHistory', JSON.stringify(orders)); }
+  }
+
+  async function pollAndRender() {
+    if (!orderId) return;
+    try {
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 2000);
+      const res = await fetch(COURIER_API + '/courier/orders/' + orderId, { signal: ctrl.signal });
+      if (res.ok) {
+        const order = await res.json();
+        const mapped = STATUS_MAP[order.status] || order.status;
+        updateOrderStatus(orderId, order.status);
+        renderTracker(mapped);
+        if (order.status === 'completed' || order.status === 'cancelled') clearInterval(trackInterval);
+      }
+    } catch(e) {}
+  }
+
+  function renderTracker(currentStatus) {
+    const trackerEl = document.getElementById('statusTracker');
+    if (!trackerEl) return;
+
+    if (currentStatus === 'cancelled') {
+      document.getElementById('confirmIcon').textContent = '❌';
+      document.getElementById('trackingTitle').textContent = 'Заказ отменён';
+      trackerEl.innerHTML = `
+        <div class="status-step cancelled">
+          <div class="step-dot">✕</div>
+          <div class="step-info"><h3>Заказ отменён</h3><p>Администратор отменил ваш заказ</p></div>
+        </div>`;
+      clearInterval(trackInterval);
+      return;
+    }
+
+    const currentIdx = STATUSES.findIndex(s => s.key === currentStatus);
+    trackerEl.innerHTML = STATUSES.map((s, i) => {
+      const isDone = i < currentIdx, isActive = i === currentIdx;
+      const cls = isDone ? 'done' : isActive ? 'active' : '';
+      return `
+        <div class="status-step ${cls}">
+          <div class="step-dot">${isDone ? '✓' : i + 1}</div>
+          <div class="step-info"><h3>${s.label}</h3><p>${s.desc}</p></div>
+        </div>`;
+    }).join('');
+  }
+
+  window.onload = () => {
+    orderId = localStorage.getItem('trackOrderId');
+    if (!orderId) {
+      document.getElementById('pageContent').innerHTML = '<div class="not-found">Заказ не найден. <a href="profile.html" style="color:var(--accent)">Вернуться к профилю</a></div>';
+      return;
+    }
+
+    // Берём данные из истории
+    const orders = getOrders();
+    const order = orders.find(o => o.id === orderId);
+    const restaurantName = order?.restaurantName || 'Заказ';
+    const address = order?.address || '';
+    const totalAmount = order?.totalAmount || 0;
+    const createdAt = order?.createdAt ? new Date(order.createdAt) : new Date();
+    const estimatedMins = Math.max(1, Math.round((createdAt.getTime() + 45 * 60000 - Date.now()) / 60000));
+
+    document.getElementById('pageContent').innerHTML = `
+      <div class="order-confirmed">
+        <div class="confirm-icon" id="confirmIcon">✅</div>
+        <h1 id="trackingTitle">${restaurantName}</h1>
+        <div class="order-id">ID: <span>${orderId.slice(0, 8)}…</span></div>
+        ${address ? `<div class="order-id" style="margin-top:0.3rem">📍 ${address}</div>` : ''}
+        <div class="order-id" style="margin-top:0.3rem">💳 ${totalAmount} ₽</div>
+      </div>
+
+      <div class="delivery-info">
+        <div>
+          <div class="label">Ожидаемое время</div>
+          <div class="time">${estimatedMins > 0 ? '~' + estimatedMins + ' мин' : 'Скоро'}</div>
+        </div>
+        <div style="font-size:2rem">🚴</div>
+      </div>
+
+      <div class="status-tracker" id="statusTracker"></div>
+
+      <button class="action-btn" onclick="window.location='index.html'">Сделать новый заказ</button>
+      <button class="action-btn" onclick="window.location='profile.html'">← Мои заказы</button>
+    `;
+
+    // Показываем сохранённый статус сразу
+    const savedStatus = order?.status ? (STATUS_MAP[order.status] || order.status) : 'created';
+    renderTracker(savedStatus);
+
+    // Опрашиваем сервер каждые 5 сек
+    pollAndRender();
+    trackInterval = setInterval(pollAndRender, 5000);
+  };
+</script>
+</body>
+</html>

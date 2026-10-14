@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Курьер — Линуксоед</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e0c; --surface: #1a1814; --card: #211f1b;
+    --accent: #e8c547; --accent2: #e87d47;
+    --text: #f0ece3; --muted: #7a7568; --border: #2e2b24;
+    --green: #47e8a0; --red: #e84747; --blue: #47b4e8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  header {
+    padding: 1.2rem 2.5rem; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100;
+  }
+  .logo { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900; color: var(--accent); }
+  .logo span { font-family: 'DM Sans', sans-serif; font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-left: 0.6rem; }
+  .header-right { display: flex; align-items: center; gap: 1rem; }
+  .status-pill { padding: 0.35rem 1rem; font-size: 0.78rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; }
+  .status-pill.free { background: rgba(71,232,160,0.15); color: var(--green); }
+  .status-pill.busy { background: rgba(232,197,71,0.15); color: var(--accent); }
+  .logout-btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 0.35rem 0.8rem; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+  .logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* LOGIN */
+  #loginView { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 65px); }
+  .login-box { background: var(--card); border: 1px solid var(--border); padding: 3rem; width: 420px; }
+  .login-box h1 { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; margin-bottom: 0.5rem; }
+  .login-box p { color: var(--muted); margin-bottom: 2rem; font-size: 0.9rem; }
+  .form-group { margin-bottom: 1.2rem; }
+  .form-group label { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.4rem; }
+  .form-group input { width: 100%; padding: 0.85rem 1rem; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+  .form-group input:focus { border-color: var(--accent); }
+  .form-group input::placeholder { color: var(--muted); }
+  .primary-btn { width: 100%; padding: 1rem; background: var(--accent); color: var(--bg); border: none; font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 1rem; cursor: pointer; transition: background 0.2s; margin-top: 0.5rem; }
+  .primary-btn:hover { background: var(--accent2); }
+  .login-divider { text-align: center; color: var(--muted); font-size: 0.8rem; margin: 1rem 0; }
+  .secondary-btn { width: 100%; padding: 0.85rem; background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; }
+  .secondary-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* APP */
+  #appView { display: none; }
+  nav { display: flex; border-bottom: 1px solid var(--border); padding: 0 2.5rem; background: var(--surface); }
+  nav button { background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); padding: 1rem 1.5rem; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; }
+  nav button:hover { color: var(--text); }
+  nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-badge { display: inline-block; background: var(--accent); color: var(--bg); border-radius: 50%; width: 18px; height: 18px; font-size: 0.7rem; font-weight: 700; text-align: center; line-height: 18px; margin-left: 6px; }
+
+  main { padding: 2rem 2.5rem; max-width: 900px; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; }
+  .refresh-info { font-size: 0.8rem; color: var(--muted); }
+
+  /* ORDER CARDS */
+  .orders-list { display: flex; flex-direction: column; gap: 1px; background: var(--border); }
+  .order-card { background: var(--card); padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; transition: background 0.2s; }
+  .order-card:hover { background: #27241e; }
+  .order-main { flex: 1; }
+  .order-restaurant { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; margin-bottom: 0.3rem; }
+  .order-address { color: var(--muted); font-size: 0.85rem; margin-bottom: 0.6rem; line-height: 1.5; }
+  .order-address .arrow { color: var(--accent); }
+  .order-meta { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+  .meta-chip { font-size: 0.8rem; color: var(--muted); }
+  .meta-chip .val { color: var(--text); font-weight: 500; }
+  .order-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .accept-btn { padding: 0.6rem 1.4rem; background: var(--green); color: #0a2a1a; border: none; font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 0.85rem; cursor: pointer; transition: opacity 0.2s; }
+  .accept-btn:hover { opacity: 0.85; }
+  .reject-btn { padding: 0.6rem 1rem; background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+  .reject-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* ACTIVE ORDER */
+  .active-order-card { background: var(--card); border: 1px solid var(--border); padding: 2rem; margin-bottom: 1.5rem; }
+  .active-order-card h3 { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; margin-bottom: 1rem; }
+  .route-steps { margin: 1.5rem 0; }
+  .route-step { display: flex; gap: 1.2rem; padding: 1rem 0; border-bottom: 1px solid var(--border); }
+  .route-step:last-child { border-bottom: none; }
+  .step-icon { width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+  .step-icon.restaurant { background: rgba(232,197,71,0.15); }
+  .step-icon.client { background: rgba(71,232,160,0.15); }
+  .step-body h4 { font-weight: 500; font-size: 0.95rem; margin-bottom: 0.2rem; }
+  .step-body p { color: var(--muted); font-size: 0.85rem; }
+  .route-summary { display: flex; gap: 2rem; padding: 1rem; background: var(--surface); margin-top: 1rem; }
+  .route-stat .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .route-stat .val { font-size: 1.2rem; font-weight: 500; color: var(--accent); }
+  .complete-btn { width: 100%; padding: 1.1rem; background: var(--green); color: #0a2a1a; border: none; font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 1rem; cursor: pointer; transition: opacity 0.2s; margin-top: 1.5rem; }
+  .complete-btn:hover { opacity: 0.85; }
+
+  /* PROFILE */
+  .profile-card { background: var(--card); border: 1px solid var(--border); padding: 2rem; }
+  .profile-row { display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  .profile-row:last-child { border-bottom: none; }
+  .profile-row .key { color: var(--muted); }
+  .profile-row .val { font-weight: 500; }
+
+  /* UTILS */
+  .empty { padding: 3rem 0; color: var(--muted); font-style: italic; }
+  .loading { padding: 2rem 0; color: var(--muted); }
+  .badge { display: inline-block; padding: 3px 10px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .badge-available { background: rgba(71,180,232,0.15); color: var(--blue); }
+  .badge-assigned   { background: rgba(232,197,71,0.15); color: var(--accent); }
+  .badge-completed  { background: rgba(71,232,160,0.15); color: var(--green); }
+  .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--accent); color: var(--text); padding: 0.9rem 1.4rem; font-size: 0.88rem; opacity: 0; transition: opacity 0.3s; z-index: 999; }
+  .toast.show { opacity: 1; }
+  .toast.error { border-left-color: var(--red); }
+
+  .new-order-pulse {
+    animation: pulse-border 1s ease-in-out 3;
+  }
+  @keyframes pulse-border {
+    0%, 100% { border-color: var(--border); }
+    50% { border-color: var(--accent); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Линуксоед <span>Курьер</span></div>
+  <div class="header-right">
+    <div id="courierStatusPill" style="display:none" class="status-pill free">Свободен</div>
+    <button class="logout-btn" id="logoutBtn" style="display:none" onclick="logout()">Выйти</button>
+  </div>
+</header>
+
+<div id="loginView">
+  <div class="login-box">
+    <h1>Войти как курьер</h1>
+    <p>Введи свой ID или зарегистрируйся</p>
+
+    <div id="loginForm">
+      <div class="form-group">
+        <label>ID или имя курьера</label>
+        <input type="text" id="loginId" placeholder="Иван Иванов или xxxxxxxx-xxxx...">
+      </div>
+      <button class="primary-btn" onclick="login()">Войти</button>
+      <div class="login-divider">или</div>
+      <button class="secondary-btn" onclick="showRegister()">Зарегистрироваться</button>
+    </div>
+
+    <div id="registerForm" style="display:none">
+      <div class="form-group">
+        <label>Имя</label>
+        <input type="text" id="regName" placeholder="Иван Иванов">
+      </div>
+      <div class="form-group">
+        <label>Телефон</label>
+        <input type="tel" id="regPhone" placeholder="+7 (999) 000-00-00">
+      </div>
+      <button class="primary-btn" onclick="register()">Зарегистрироваться</button>
+      <div class="login-divider">или</div>
+      <button class="secondary-btn" onclick="showLogin()">Уже есть аккаунт</button>
+    </div>
+
+    <div id="loginError" style="color:var(--red);font-size:0.85rem;margin-top:0.8rem"></div>
+  </div>
+</div>
+
+<div id="appView">
+  <nav>
+    <button class="active" id="tabAvailable" onclick="showTab('available', this)">
+      Доступные заказы <span id="availableBadge" style="display:none" class="tab-badge">0</span>
+    </button>
+    <button id="tabActive" onclick="showTab('active', this)">Мой заказ</button>
+    <button onclick="showTab('profile', this)">Профиль</button>
+  </nav>
+
+  <main>
+    <div id="available" class="section active">
+      <div class="section-header">
+        <div class="section-title">Доступные заказы</div>
+        <div class="refresh-info" id="refreshInfo">Обновляется автоматически</div>
+      </div>
+      <div id="availableList"><div class="loading">Загрузка...</div></div>
+    </div>
+
+    <div id="active" class="section">
+      <div class="section-title" style="margin-bottom:1.5rem">Мой заказ</div>
+      <div id="activeOrderContent"><div class="empty">Нет активного заказа</div></div>
+    </div>
+
+    <div id="profile" class="section">
+      <div class="section-title" style="margin-bottom:1.5rem">Профиль</div>
+      <div id="profileContent" class="profile-card"></div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API = 'http://localhost:8082';
+  let currentCourier = null;
+  let activeOrderId = null;
+  let autoRefreshTimer = null;
+  let lastOrderCount = 0;
+  let currentTab = 'available';
+
+  // ─── ВХОД ────────────────────────────────────────────────────────────────
+
+  function showRegister() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('registerForm').style.display = 'block';
+  }
+  function showLogin() {
+    document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('loginForm').style.display = 'block';
+  }
+
+  async function login() {
+    const input = document.getElementById('loginId').value.trim();
+    if (!input) { showLoginError('Введи ID или имя курьера'); return; }
+    // Пробуем сначала по ID, потом по имени
+    try {
+      const res = await fetch(`${API}/courier/profile?courier_id=${encodeURIComponent(input)}`);
+      if (res.ok) {
+        currentCourier = await res.json();
+        localStorage.setItem('courierId', currentCourier.id);
+        enterApp();
+        return;
+      }
+    } catch(e) {}
+    // Пробуем по имени
+    try {
+      const res = await fetch(`${API}/courier/find?name=${encodeURIComponent(input)}`);
+      if (!res.ok) throw new Error('Курьер не найден. Проверь имя или ID, или зарегистрируйся.');
+      currentCourier = await res.json();
+      localStorage.setItem('courierId', currentCourier.id);
+      enterApp();
+    } catch(e) { showLoginError(e.message); }
+  }
+
+  async function register() {
+    const name  = document.getElementById('regName').value.trim();
+    const phone = document.getElementById('regPhone').value.trim();
+    if (!name)  { showLoginError('Введи имя'); return; }
+    if (!phone) { showLoginError('Введи номер телефона'); return; }
+    const digits = phone.replace(/\D/g, '');
+    const isRussian = digits.length === 11 && (digits[0] === '7' || digits[0] === '8');
+    if (!isRussian) { showLoginError('Введи российский номер: +7 (XXX) XXX-XX-XX'); return; }
+    try {
+      const res = await fetch(`${API}/courier/register`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone })
+      });
+      if (!res.ok) throw new Error('Ошибка регистрации');
+      currentCourier = await res.json();
+      localStorage.setItem('courierId', currentCourier.id);
+      enterApp();
+    } catch(e) { showLoginError(e.message); }
+  }
+
+  function showLoginError(msg) {
+    document.getElementById('loginError').textContent = msg;
+  }
+
+  function logout() {
+    clearInterval(autoRefreshTimer);
+    localStorage.removeItem('courierId');
+    currentCourier = null;
+    activeOrderId = null;
+    document.getElementById('appView').style.display = 'none';
+    document.getElementById('loginView').style.display = 'flex';
+    document.getElementById('courierStatusPill').style.display = 'none';
+    document.getElementById('logoutBtn').style.display = 'none';
+    document.getElementById('loginId').value = '';
+    document.getElementById('loginError').textContent = '';
+  }
+
+  function enterApp() {
+    document.getElementById('loginView').style.display = 'none';
+    document.getElementById('appView').style.display = 'block';
+    document.getElementById('courierStatusPill').style.display = 'block';
+    document.getElementById('logoutBtn').style.display = 'block';
+    updateStatusPill();
+
+    // Восстанавливаем активный заказ из localStorage
+    const savedOrder = localStorage.getItem('activeOrderId_' + currentCourier.id);
+    if (savedOrder) activeOrderId = savedOrder;
+
+    loadAvailableOrders();
+    startAutoRefresh();
+  }
+
+  function updateStatusPill() {
+    const pill = document.getElementById('courierStatusPill');
+    if (currentCourier.status === 'busy') {
+      pill.textContent = 'Занят'; pill.className = 'status-pill busy';
+    } else {
+      pill.textContent = 'Свободен'; pill.className = 'status-pill free';
+    }
+  }
+
+  // ─── АВТООБНОВЛЕНИЕ ──────────────────────────────────────────────────────
+
+  function startAutoRefresh() {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = setInterval(async () => {
+      // Обновляем счётчик доступных заказов
+      try {
+        const res = await fetch(`${API}/courier/orders/available`);
+        const data = await res.json();
+        const orders = data.orders || [];
+        const count = orders.length;
+
+        // Обновляем бейдж на вкладке
+        const badge = document.getElementById('availableBadge');
+        if (count > 0) {
+          badge.textContent = count;
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
+
+        // Если появился новый заказ — уведомляем
+        if (count > lastOrderCount && lastOrderCount >= 0) {
+          showToast(`Новый заказ доступен!`);
+        }
+        lastOrderCount = count;
+
+        // Если сейчас открыта вкладка доступных — обновляем список
+        if (currentTab === 'available') {
+          renderOrdersList(orders);
+        }
+      } catch(e) {}
+
+      // Если есть активный заказ — проверяем его статус
+      if (activeOrderId && currentTab === 'active') {
+        renderActiveOrder();
+      }
+    }, 5000); // каждые 5 секунд
+  }
+
+  // ─── ТАБЫ ────────────────────────────────────────────────────────────────
+
+  function showTab(name, btn) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById(name).classList.add('active');
+    btn.classList.add('active');
+    currentTab = name;
+    if (name === 'available') loadAvailableOrders();
+    if (name === 'active') renderActiveOrder();
+    if (name === 'profile') renderProfile();
+  }
+
+  // ─── ДОСТУПНЫЕ ЗАКАЗЫ ────────────────────────────────────────────────────
+
+  async function loadAvailableOrders() {
+    try {
+      const res = await fetch(`${API}/courier/orders/available`);
+      const data = await res.json();
+      renderOrdersList(data.orders || []);
+    } catch(e) {
+      document.getElementById('availableList').innerHTML = '<div class="empty">Сервер недоступен</div>';
+    }
+  }
+
+  function renderOrdersList(orders) {
+    const el = document.getElementById('availableList');
+    if (orders.length === 0) {
+      el.innerHTML = '<div class="empty">Нет доступных заказов — список обновляется каждые 5 секунд</div>';
+      return;
+    }
+    el.innerHTML = '<div class="orders-list">' +
+      orders.map(o => `
+        <div class="order-card">
+          <div class="order-main">
+            <div class="order-restaurant">${o.restaurant_name}</div>
+            <div class="order-address">
+              📍 ${o.restaurant_address || 'Адрес ресторана'}
+              <span class="arrow"> → </span>
+              🏠 ${o.delivery_address}
+            </div>
+            ${o.customer_name ? `<div style="font-size:0.82rem;color:var(--muted);margin-bottom:0.5rem">👤 ${o.customer_name}</div>` : ''}
+            <div class="order-meta">
+              <div class="meta-chip">Позиций: <span class="val">${o.items_count}</span></div>
+              <div class="meta-chip">Доставка: <span class="val">${o.delivery_fee} ₽</span></div>
+              <div class="meta-chip">Сумма: <span class="val">${o.total_amount} ₽</span></div>
+            </div>
+          </div>
+          <div class="order-actions">
+            <button class="accept-btn" onclick="acceptOrder('${o.id}')">Принять</button>
+            <button class="reject-btn" onclick="rejectOrder('${o.id}')">Отказ</button>
+          </div>
+        </div>`).join('') + '</div>';
+  }
+
+  async function acceptOrder(orderId) {
+    if (currentCourier.status === 'busy') {
+      showToast('У тебя уже есть активный заказ', true); return;
+    }
+    try {
+      const res = await fetch(`${API}/courier/orders/${orderId}/respond`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courier_id: currentCourier.id, action: 'accept' })
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+      const order = await res.json();
+      activeOrderId = order.id;
+      localStorage.setItem('activeOrderId_' + currentCourier.id, activeOrderId);
+      currentCourier.status = 'busy';
+      updateStatusPill();
+      showToast('Заказ принят!');
+      document.getElementById('tabActive').click();
+    } catch(e) { showToast(e.message, true); }
+  }
+
+  async function rejectOrder(orderId) {
+    try {
+      await fetch(`${API}/courier/orders/${orderId}/respond`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courier_id: currentCourier.id, action: 'reject', reason: 'Слишком далеко' })
+      });
+      showToast('Заказ отклонён');
+      loadAvailableOrders();
+    } catch(e) { showToast(e.message, true); }
+  }
+
+  // ─── АКТИВНЫЙ ЗАКАЗ ──────────────────────────────────────────────────────
+
+  async function renderActiveOrder() {
+    const el = document.getElementById('activeOrderContent');
+    if (!activeOrderId) {
+      el.innerHTML = '<div class="empty">Нет активного заказа. Перейди во вкладку «Доступные заказы».</div>';
+      return;
+    }
+    try {
+      const [orderRes, routeRes] = await Promise.all([
+        fetch(`${API}/courier/orders/${activeOrderId}`),
+        fetch(`${API}/courier/orders/${activeOrderId}/route?courier_id=${currentCourier.id}`)
+      ]);
+      const order = await orderRes.json();
+      const route = routeRes.ok ? await routeRes.json() : null;
+
+      if (order.status === 'completed') {
+        el.innerHTML = `
+          <div class="active-order-card" style="border-left:3px solid var(--green)">
+            <h3 style="color:var(--green)">✓ Заказ доставлен!</h3>
+            <p style="color:var(--muted);margin-top:0.5rem">${order.restaurant_name} → ${order.delivery_address}</p>
+            <p style="color:var(--muted);font-size:0.85rem;margin-top:0.5rem">Можешь принять следующий заказ</p>
+          </div>`;
+        activeOrderId = null;
+        localStorage.removeItem('activeOrderId_' + currentCourier.id);
+        currentCourier.status = 'free';
+        updateStatusPill();
+        return;
+      }
+
+      const legToRest = route?.legs?.find(l => l.type === 'to_restaurant');
+      const legToClient = route?.legs?.find(l => l.type === 'to_client');
+
+      el.innerHTML = `
+        <div class="active-order-card">
+          <h3>${order.restaurant_name}</h3>
+          <div style="margin-bottom:0.8rem"><span class="badge badge-${order.status}">${order.status === 'assigned' ? 'В доставке' : order.status}</span></div>
+          ${order.customer_name ? `<p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem">👤 Клиент: ${order.customer_name}</p>` : ''}
+          <div class="route-steps">
+            <div class="route-step">
+              <div class="step-icon restaurant">🍽️</div>
+              <div class="step-body">
+                <h4>Забрать в ресторане</h4>
+                <p>${order.restaurant_address || 'Адрес ресторана'}</p>
+                ${legToRest ? `<p style="color:var(--accent);font-size:0.8rem;margin-top:0.3rem">~${legToRest.estimated_minutes} мин · ${legToRest.distance_km.toFixed(1)} км</p>` : ''}
+              </div>
+            </div>
+            <div class="route-step">
+              <div class="step-icon client">🏠</div>
+              <div class="step-body">
+                <h4>Доставить клиенту</h4>
+                <p>${order.delivery_address}</p>
+                ${legToClient ? `<p style="color:var(--green);font-size:0.8rem;margin-top:0.3rem">~${legToClient.estimated_minutes} мин · ${legToClient.distance_km.toFixed(1)} км</p>` : ''}
+              </div>
+            </div>
+          </div>
+          ${route ? `<div class="route-summary">
+            <div class="route-stat"><div class="label">Расстояние</div><div class="val">${route.total_distance_km.toFixed(1)} км</div></div>
+            <div class="route-stat"><div class="label">Время</div><div class="val">${route.total_estimated_minutes} мин</div></div>
+            <div class="route-stat"><div class="label">Оплата</div><div class="val">${order.delivery_fee} ₽</div></div>
+          </div>` : ''}
+          <button class="complete-btn" onclick="completeDelivery()">✓ Подтвердить доставку</button>
+        </div>`;
+    } catch(e) {
+      el.innerHTML = '<div class="empty">Ошибка загрузки заказа</div>';
+    }
+  }
+
+  async function completeDelivery() {
+    if (!activeOrderId) return;
+    try {
+      const res = await fetch(`${API}/courier/orders/${activeOrderId}/complete`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courier_id: currentCourier.id })
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+      showToast('Доставка подтверждена!');
+      activeOrderId = null;
+      localStorage.removeItem('activeOrderId_' + currentCourier.id);
+      currentCourier.status = 'free';
+      updateStatusPill();
+      renderActiveOrder();
+    } catch(e) { showToast(e.message, true); }
+  }
+
+  // ─── ПРОФИЛЬ ─────────────────────────────────────────────────────────────
+
+  function renderProfile() {
+    if (!currentCourier) return;
+    document.getElementById('profileContent').innerHTML = `
+      <div class="profile-row"><span class="key">ID (для входа)</span><span class="val" style="font-size:0.75rem;word-break:break-all">${currentCourier.id}</span></div>
+      <div class="profile-row"><span class="key">Имя</span><span class="val">${currentCourier.name}</span></div>
+      <div class="profile-row"><span class="key">Телефон</span><span class="val">${currentCourier.phone || '—'}</span></div>
+      <div class="profile-row"><span class="key">Статус</span><span class="val">${currentCourier.status === 'free' ? '🟢 Свободен' : '🟡 Занят'}</span></div>
+    `;
+  }
+
+  // ─── УТИЛИТЫ ─────────────────────────────────────────────────────────────
+
+  function showToast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isError ? ' error' : '');
+    setTimeout(() => t.className = 'toast', 3000);
+  }
+
+  // Авто-вход если ID сохранён
+  window.onload = async () => {
+    const savedId = localStorage.getItem('courierId');
+    if (savedId) {
+      try {
+        const res = await fetch(`${API}/courier/profile?courier_id=${encodeURIComponent(savedId)}`);
+        if (res.ok) {
+          currentCourier = await res.json();
+          enterApp();
+          return;
+        }
+      } catch(e) {}
+      localStorage.removeItem('courierId');
+    }
+  };
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    if (document.getElementById('loginForm').style.display !== 'none') login();
+    else register();
+  });
+</script>
+</body>
+</html>

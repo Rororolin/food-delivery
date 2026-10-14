@@ -1,0 +1,362 @@
+openapi: 3.0.3
+info:
+  title: Admin API — Food Delivery Service
+  description: |
+    REST API администраторской части сервиса доставки еды.
+    Реализует управление заказами, платежами, уведомлениями и пользователями.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Локальный сервер разработки
+
+tags:
+  - name: orders
+    description: Сервис управления заказами
+  - name: payments
+    description: Сервис обработки платежей
+  - name: users
+    description: Сервис управления пользователями
+
+paths:
+  # ─── Сервис управления заказами ───────────────────────────────────────────
+
+  /admin/orders:
+    get:
+      tags: [orders]
+      summary: Получение списка заказов
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, assigned, delivering, delivered, cancelled]
+          description: Фильтр по статусу заказа (необязательный)
+      responses:
+        "200":
+          description: Список заказов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Order"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/orders/{order_id}:
+    get:
+      tags: [orders]
+      summary: Получение деталей заказа
+      parameters:
+        - $ref: "#/components/parameters/OrderID"
+      responses:
+        "200":
+          description: Детали заказа
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/orders/{order_id}/status:
+    patch:
+      tags: [orders]
+      summary: Изменение статуса заказа
+      parameters:
+        - $ref: "#/components/parameters/OrderID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [pending, assigned, delivering, delivered, cancelled]
+      responses:
+        "200":
+          description: Статус успешно обновлён
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order_id:
+                    type: string
+                  new_status:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /admin/orders/{order_id}/cancel:
+    post:
+      tags: [orders]
+      summary: Отмена заказа
+      parameters:
+        - $ref: "#/components/parameters/OrderID"
+      responses:
+        "200":
+          description: Заказ отменён
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order_id:
+                    type: string
+                  new_status:
+                    type: string
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /admin/orders/{order_id}/courier:
+    patch:
+      tags: [orders]
+      summary: Переназначение курьера
+      parameters:
+        - $ref: "#/components/parameters/OrderID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [courier_id]
+              properties:
+                courier_id:
+                  type: string
+      responses:
+        "200":
+          description: Курьер переназначен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order_id:
+                    type: string
+                  courier_id:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  # ─── Сервис обработки платежей ────────────────────────────────────────────
+
+  /admin/orders/{order_id}/refund:
+    post:
+      tags: [payments]
+      summary: Выполнение возврата средств по заказу
+      parameters:
+        - $ref: "#/components/parameters/OrderID"
+      responses:
+        "200":
+          description: Возврат успешно выполнен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Refund"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ─── Сервис управления пользователями ────────────────────────────────────
+
+  /admin/users:
+    get:
+      tags: [users]
+      summary: Получение списка пользователей
+      responses:
+        "200":
+          description: Список пользователей
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /admin/users/{user_id}:
+    get:
+      tags: [users]
+      summary: Получение пользователя по ID
+      parameters:
+        - $ref: "#/components/parameters/UserID"
+      responses:
+        "200":
+          description: Данные пользователя
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/users/{user_id}/block:
+    patch:
+      tags: [users]
+      summary: Блокировка пользователя
+      parameters:
+        - $ref: "#/components/parameters/UserID"
+      responses:
+        "200":
+          description: Пользователь заблокирован
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                  blocked:
+                    type: boolean
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /admin/users/{user_id}/unblock:
+    patch:
+      tags: [users]
+      summary: Разблокировка пользователя
+      parameters:
+        - $ref: "#/components/parameters/UserID"
+      responses:
+        "200":
+          description: Пользователь разблокирован
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                  blocked:
+                    type: boolean
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+components:
+  parameters:
+    OrderID:
+      in: path
+      name: order_id
+      required: true
+      schema:
+        type: string
+    UserID:
+      in: path
+      name: user_id
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        customer_id:
+          type: string
+        courier_id:
+          type: string
+        status:
+          type: string
+        totalAmount:
+          type: number
+        is_paid:
+          type: boolean
+        is_refunded:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        is_blocked:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    Refund:
+      type: object
+      properties:
+        order_id:
+          type: string
+        amount:
+          type: number
+        refund_status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Некорректные параметры запроса
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Ресурс не найден
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: Конфликт бизнес-логики
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InternalError:
+      description: Внутренняя ошибка сервера
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Профиль — Линуксоед</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e0c; --surface: #1a1814; --card: #211f1b;
+    --accent: #e8c547; --accent2: #e87d47;
+    --text: #f0ece3; --muted: #7a7568; --border: #2e2b24;
+    --green: #47e8a0; --red: #e84747; --blue: #47b4e8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  header {
+    padding: 1.5rem 3rem; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100;
+  }
+  .logo { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 900; color: var(--accent); cursor: pointer; }
+  .cart-btn {
+    background: var(--accent); color: var(--bg); border: none;
+    padding: 0.6rem 1.4rem; font-family: 'DM Sans', sans-serif;
+    font-weight: 500; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;
+  }
+  .cart-btn:hover { background: var(--accent2); }
+
+  .page { max-width: 800px; padding: 3rem; }
+
+  .page-title { font-family: 'Playfair Display', serif; font-size: 2.5rem; font-weight: 900; margin-bottom: 2rem; }
+
+  /* Профиль */
+  .profile-card {
+    background: var(--card); border: 1px solid var(--border);
+    padding: 2rem; margin-bottom: 2rem;
+  }
+  .profile-card h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; font-weight: 700; margin-bottom: 1.2rem; color: var(--accent); }
+  .profile-row { display: flex; justify-content: space-between; align-items: center; padding: 0.7rem 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  .profile-row:last-child { border-bottom: none; }
+  .profile-row .key { color: var(--muted); }
+  .profile-row .val { font-weight: 500; }
+
+  /* Форма редактирования */
+  .edit-form { margin-top: 1.5rem; display: none; }
+  .form-group { margin-bottom: 1rem; }
+  .form-group label { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.4rem; }
+  .form-group input {
+    width: 100%; padding: 0.8rem 1rem; background: var(--surface);
+    border: 1px solid var(--border); color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 0.95rem; outline: none; transition: border-color 0.2s;
+  }
+  .form-group input:focus { border-color: var(--accent); }
+  .form-group input::placeholder { color: var(--muted); }
+  .save-btn {
+    padding: 0.8rem 2rem; background: var(--accent); color: var(--bg);
+    border: none; font-family: 'DM Sans', sans-serif; font-weight: 500;
+    font-size: 0.9rem; cursor: pointer; transition: background 0.2s;
+  }
+  .save-btn:hover { background: var(--accent2); }
+  .edit-btn {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    padding: 0.4rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .edit-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Заказы */
+  .orders-title { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; margin-bottom: 1.2rem; }
+  .order-card {
+    background: var(--card); border: 1px solid var(--border);
+    padding: 1.5rem; margin-bottom: 1px;
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .order-card:hover { background: #27241e; }
+  .order-info h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.3rem; }
+  .order-info .meta { color: var(--muted); font-size: 0.85rem; }
+  .order-right { text-align: right; flex-shrink: 0; }
+  .order-amount { font-size: 1.1rem; font-weight: 500; color: var(--accent); margin-bottom: 0.3rem; }
+
+  .badge { display: inline-block; padding: 3px 10px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .badge-created, .badge-available   { background: rgba(71,180,232,0.15); color: var(--blue); }
+  .badge-preparing                   { background: rgba(232,197,71,0.15); color: var(--accent); }
+  .badge-courier_assigned, .badge-assigned { background: rgba(232,125,71,0.15); color: var(--accent2); }
+  .badge-in_transit, .badge-delivering { background: rgba(232,197,71,0.15); color: var(--accent); }
+  .badge-delivered, .badge-completed { background: rgba(71,232,160,0.15); color: var(--green); }
+  .badge-cancelled                   { background: rgba(232,71,71,0.15); color: var(--red); }
+
+  .status-ru { font-size: 0.75rem; }
+
+  .empty { padding: 2rem 0; color: var(--muted); font-style: italic; }
+  .no-profile {
+    background: var(--card); border: 1px solid var(--border);
+    padding: 2rem; text-align: center; color: var(--muted);
+  }
+  .no-profile p { margin-bottom: 1rem; }
+  .go-order-btn {
+    display: inline-block; padding: 0.8rem 2rem; background: var(--accent); color: var(--bg);
+    border: none; font-family: 'DM Sans', sans-serif; font-weight: 500;
+    font-size: 0.9rem; cursor: pointer; transition: background 0.2s; text-decoration: none;
+  }
+  .go-order-btn:hover { background: var(--accent2); }
+
+  .track-btn {
+    padding: 0.4rem 1rem; background: none; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.8rem;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .track-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .track-btn.active-order { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo" onclick="window.location='index.html'">Линуксоед</div>
+  <button class="cart-btn" onclick="window.location='cart.html'">🛒 Корзина</button>
+</header>
+
+<div class="page">
+  <h1 class="page-title">Мой профиль</h1>
+
+  <div id="profileSection"></div>
+
+  <div class="orders-title">История заказов</div>
+  <div id="ordersList"></div>
+</div>
+
+<script>
+  const COURIER_API = 'http://localhost:8082';
+
+  const STATUS_RU = {
+    'created':          'Принят',
+    'available':        'Ищем курьера',
+    'preparing':        'Готовится',
+    'assigned':         'Курьер едет',
+    'courier_assigned': 'Курьер едет',
+    'in_transit':       'В пути',
+    'delivering':       'В пути',
+    'completed':        'Доставлен',
+    'delivered':        'Доставлен',
+    'cancelled':        'Отменён',
+  };
+
+  // Нормализуем статус для CSS класса
+  const STATUS_CLASS = {
+    'available':        'created',
+    'assigned':         'courier_assigned',
+    'delivering':       'in_transit',
+    'completed':        'delivered',
+  };
+
+  function getProfile() {
+    const raw = localStorage.getItem('clientProfile');
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  function saveProfile(profile) {
+    localStorage.setItem('clientProfile', JSON.stringify(profile));
+  }
+
+  function getOrders() {
+    const raw = localStorage.getItem('orderHistory');
+    return raw ? JSON.parse(raw) : [];
+  }
+
+  function renderProfile() {
+    const profile = getProfile();
+    const el = document.getElementById('profileSection');
+
+    if (!profile) {
+      el.innerHTML = `
+        <div class="no-profile">
+          <p>Вы ещё не оформляли заказы. Профиль создаётся автоматически при первом заказе.</p>
+          <a class="go-order-btn" href="index.html">Выбрать ресторан</a>
+        </div>`;
+      return;
+    }
+
+    el.innerHTML = `
+      <div class="profile-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem">
+          <h2>Данные профиля</h2>
+          <button class="edit-btn" onclick="toggleEdit()">✏️ Редактировать</button>
+        </div>
+        <div id="profileView">
+          <div class="profile-row"><span class="key">Имя</span><span class="val">${profile.name}</span></div>
+          <div class="profile-row"><span class="key">Телефон</span><span class="val">${profile.phone}</span></div>
+          <div class="profile-row"><span class="key">Адрес доставки</span><span class="val">${profile.address || '—'}</span></div>
+          <div class="profile-row"><span class="key">Заказов всего</span><span class="val" style="color:var(--accent)">${getOrders().length}</span></div>
+        </div>
+        <div class="edit-form" id="editForm">
+          <div class="form-group">
+            <label>Имя</label>
+            <input type="text" id="editName" value="${profile.name}" placeholder="Ваше имя">
+          </div>
+          <div class="form-group">
+            <label>Телефон</label>
+            <input type="tel" id="editPhone" value="${profile.phone}" placeholder="+7 (999) 000-00-00">
+          </div>
+          <div class="form-group">
+            <label>Адрес доставки по умолчанию</label>
+            <input type="text" id="editAddress" value="${profile.address || ''}" placeholder="Улица, дом, квартира">
+          </div>
+          <div id="editError" style="color:var(--red);font-size:0.85rem;margin-bottom:0.8rem"></div>
+          <button class="save-btn" onclick="saveProfileEdit()">Сохранить</button>
+        </div>
+      </div>`;
+  }
+
+  function toggleEdit() {
+    const form = document.getElementById('editForm');
+    const isVisible = form.style.display === 'block';
+    form.style.display = isVisible ? 'none' : 'block';
+  }
+
+  function saveProfileEdit() {
+    const name    = document.getElementById('editName').value.trim();
+    const phone   = document.getElementById('editPhone').value.trim();
+    const address = document.getElementById('editAddress').value.trim();
+    const errEl   = document.getElementById('editError');
+
+    if (!name) { errEl.textContent = 'Введи имя'; return; }
+    if (!phone) { errEl.textContent = 'Введи телефон'; return; }
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length !== 11 || (digits[0] !== '7' && digits[0] !== '8')) {
+      errEl.textContent = 'Введи российский номер: +7 (XXX) XXX-XX-XX'; return;
+    }
+
+    const profile = getProfile() || {};
+    profile.name    = name;
+    profile.phone   = phone;
+    profile.address = address;
+    saveProfile(profile);
+    renderProfile();
+  }
+
+  async function renderOrders() {
+    const orders = getOrders();
+    const el = document.getElementById('ordersList');
+
+    if (orders.length === 0) {
+      el.innerHTML = '<div class="empty">Заказов пока нет</div>';
+      return;
+    }
+
+    // Сортируем по дате — свежие сверху
+    const sorted = [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // Для активных заказов — обновляем статус с сервера
+    const rendered = await Promise.all(sorted.map(async order => {
+      let status = order.status;
+      let liveStatus = null;
+
+      // Спрашиваем актуальный статус у курьерского сервера
+      try {
+        const ctrl = new AbortController();
+        setTimeout(() => ctrl.abort(), 2000);
+        const res = await fetch(COURIER_API + '/courier/orders/' + order.id, { signal: ctrl.signal });
+        if (res.ok) {
+          const live = await res.json();
+          liveStatus = live.status;
+          status = liveStatus;
+          // Обновляем в localStorage
+          order.status = status;
+        }
+      } catch(e) {}
+
+      const cssClass = STATUS_CLASS[status] || status;
+      const ruLabel  = STATUS_RU[status] || status;
+      const isActive = status !== 'completed' && status !== 'delivered' && status !== 'cancelled';
+      const date     = new Date(order.createdAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+
+      return `
+        <div class="order-card">
+          <div class="order-info">
+            <h3>${order.restaurantName || 'Заказ'}</h3>
+            <div class="meta">${date} · ${order.address || ''}</div>
+          </div>
+          <div class="order-right">
+            <div class="order-amount">${order.totalAmount} ₽</div>
+            <span class="badge badge-${cssClass}">${ruLabel}</span>
+            ${isActive ? `<br><button class="track-btn active-order" style="margin-top:0.5rem" onclick="trackOrder('${order.id}')">Отследить</button>` : ''}
+          </div>
+        </div>`;
+    }));
+
+    // Сохраняем обновлённые статусы
+    localStorage.setItem('orderHistory', JSON.stringify(sorted));
+
+    el.innerHTML = rendered.join('');
+  }
+
+  function trackOrder(orderId) {
+    // Передаём orderId на страницу checkout через localStorage и открываем трекинг
+    localStorage.setItem('trackOrderId', orderId);
+    window.location.href = 'track.html';
+  }
+
+  // Подставляем сохранённый адрес в поле на главной
+  window.onload = () => {
+    renderProfile();
+    renderOrders();
+
+    // Если есть сохранённый адрес — подставляем на главной странице
+    const profile = getProfile();
+    if (profile && profile.address) {
+      localStorage.setItem('savedAddress', profile.address);
+    }
+  };
+</script>
+</body>
+</html>
